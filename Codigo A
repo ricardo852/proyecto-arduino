@@ -1,0 +1,185 @@
+// ===== Pines =====
+const int BTN_PIN    = 13; // Pulsador (a GND)
+const int LED_RED    = 12;
+const int LED_YELLOW = 11;
+const int LED_GREEN  = 10;
+
+// ===== Variables =====
+bool lastState      = HIGH;
+int  pressCount     = 0;
+int  interruptor    = 0;
+unsigned long lastPress = 0;
+const unsigned long TIMEOUT = 1000;  // 1 s sin pulsar = ejecuta
+
+// ===== Estados intermitencia =====
+bool blinkRed = false;
+bool blinkYellow = false;
+bool blinkGreen = false;
+
+unsigned long lastBlink = 0;
+const unsigned long BLINK_INTERVAL = 500;
+bool blinkState = false;
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(LED_RED, OUTPUT);
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_YELLOW, OUTPUT);
+  pinMode(BTN_PIN, INPUT_PULLUP);
+
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_YELLOW, LOW);
+
+  mainMenu();
+}
+
+void loop() {
+  // ===== Lectura del botón =====
+  bool currentState = digitalRead(BTN_PIN);
+  if (lastState == HIGH && currentState == LOW) {
+    pressCount++;
+    lastPress = millis();
+    Serial.print("Contador: ");
+    Serial.println(pressCount);
+    delay(50); // antirrebote
+  }
+  lastState = currentState;
+
+  // ===== Si pasa TIMEOUT, ejecuta =====
+  if (pressCount > 0 && (millis() - lastPress) > TIMEOUT) {
+    Serial.print("Acción #");
+    Serial.println(pressCount);
+    handleOption(pressCount);
+    pressCount = 0;
+    mainMenu();
+  }
+
+  // ===== Menú serie =====
+  if (Serial.available() > 0) {
+    char opt = (char)Serial.read();
+    if (opt != '\n' && opt != '\r') {
+      handleOption(opt - '0');
+      mainMenu();
+    }
+  }
+
+  // ===== Manejo de intermitencia =====
+  if (millis() - lastBlink >= BLINK_INTERVAL) {
+    lastBlink = millis();
+    blinkState = !blinkState;
+
+    if (blinkRed) digitalWrite(LED_RED, blinkState);
+    if (blinkYellow) digitalWrite(LED_YELLOW, blinkState);
+    if (blinkGreen) digitalWrite(LED_GREEN, blinkState);
+  }
+}
+
+// ========================= FUNCIONES DE CADA LED =========================
+
+// --- LED ROJO ---
+void ledRedOn() {
+  blinkRed = false;
+  digitalWrite(LED_RED, HIGH);
+  Serial.println("LED ROJO ON");
+}
+
+void ledRedOff() {
+  blinkRed = false;
+  digitalWrite(LED_RED, LOW);
+  Serial.println("LED ROJO OFF");
+}
+
+void ledRedBlink() {
+  blinkRed = true;
+  Serial.println("LED ROJO intermitente");
+}
+
+// --- LED AMARILLO ---
+void ledYellowOn() {
+  blinkYellow = false;
+  digitalWrite(LED_YELLOW, HIGH);
+  Serial.println("LED AMARILLO ON");
+}
+
+void ledYellowOff() {
+  blinkYellow = false;
+  digitalWrite(LED_YELLOW, LOW);
+  Serial.println("LED AMARILLO OFF");
+}
+
+void ledYellowBlink() {
+  blinkYellow = true;
+  Serial.println("LED AMARILLO intermitente");
+}
+
+// --- LED VERDE ---
+void ledGreenOn() {
+  blinkGreen = false;
+  digitalWrite(LED_GREEN, HIGH);
+  Serial.println("LED VERDE ON");
+}
+
+void ledGreenOff() {
+  blinkGreen = false;
+  digitalWrite(LED_GREEN, LOW);
+  Serial.println("LED VERDE OFF");
+}
+
+void ledGreenBlink() {
+  blinkGreen = true;
+  Serial.println("LED VERDE intermitente");
+}
+//===========================Interruptor LED rojo ==============================// ========================= FUNCIÓN TOGGLE LED ROJO =========================
+// ========================= FUNCIÓN TOGGLE LED ROJO =========================
+void toggleRed() {
+  if (blinkRed) {
+    // Si estaba en intermitencia → apagar y quitar parpadeo
+    blinkRed = false;
+    digitalWrite(LED_RED, LOW);
+    Serial.println("LED ROJO OFF (toggle - intermitencia detenida)");
+  } else {
+    // Si no está en intermitencia → encender/apagar normalmente
+    if (digitalRead(LED_RED) == HIGH) {
+      digitalWrite(LED_RED, LOW);
+      Serial.println("LED ROJO OFF (toggle)");
+    } else {
+      digitalWrite(LED_RED, HIGH);
+      Serial.println("LED ROJO ON (toggle)");
+    }
+  }
+}
+// ========================= MENÚ PRINCIPAL =========================
+void handleOption(int option) {
+  switch (option) {
+    case 0: toggleRed(); break;   // <<=== toggle corregido
+    case 1: ledRedOn(); break;
+    case 2: ledRedOff(); break;
+    case 3: ledYellowOn(); break;
+    case 4: ledYellowOff(); break;
+    case 5: ledGreenOn(); break;
+    case 6: ledGreenOff(); break;
+    case 7: ledRedOn(); ledYellowOn(); ledGreenOn(); break;
+    case 8: ledRedOff(); ledYellowOff(); ledGreenOff(); break;
+    case 9: ledRedBlink(); ledYellowBlink(); ledGreenBlink(); break;
+    default: Serial.println("Número fuera de 0–9"); break;
+  }
+}
+
+
+
+
+void mainMenu() {
+  Serial.println("[1] LED rojo ON");
+  Serial.println("[2] LED rojo OFF");
+  Serial.println("[3] LED amarillo ON");
+  Serial.println("[4] LED amarillo OFF");
+  Serial.println("[5] LED verde ON");
+  Serial.println("[6] LED verde OFF");
+  Serial.println("[7] TODOS ON");
+  Serial.println("[8] TODOS OFF");
+  Serial.println("[9] TODOS intermitentes");
+  Serial.println("[0] OFF and ON LED rojo");
+   
+}
